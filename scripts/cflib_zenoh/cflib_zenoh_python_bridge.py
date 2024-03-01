@@ -24,7 +24,7 @@ class CflibZenohBridge:
         zenoh.init_logger()
         self._zenoh_session = zenoh.open(zenoh.Config())
         self.connect = self._zenoh_session.declare_queryable("cflib/connect", self._connect_zenoh_callback, False)
-
+        self.crazyflies = {}
 
     def close_zenoh(self):
         self._zenoh_session.close()
@@ -37,16 +37,14 @@ class CflibZenohBridge:
         for key in dict_obj['crazyflies']:
             self.uris.append(dict_obj['crazyflies'][key])
         print(self.uris)
-        factory = CachedCfFactory(rw_cache="./cache")
-        self.swarm = Swarm(self.uris, factory=factory)
+
         for link_uri in self.uris:
-            self.swarm._cfs[link_uri].cf.connected.add_callback(self._connected_cflib_callback)
-            self.swarm._cfs[link_uri].cf.connected.add_callback(self._full_connected_cflib_callback)
-            self.swarm._cfs[link_uri].cf.connection_failed.add_callback(self._connection_failed_cflib_callback)
-            self.swarm._cfs[link_uri].cf.disconnected.add_callback(self._disconnected_cflib_callback)
-        self.swarm.open_links()
-
-
+            self.crazyflies[link_uri] = Crazyflie(rw_cache="./cache")
+            self.crazyflies[link_uri].connected.add_callback(self._connected_cflib_callback)
+            self.crazyflies[link_uri].connected.add_callback(self._full_connected_cflib_callback)
+            self.crazyflies[link_uri].connection_failed.add_callback(self._connection_failed_cflib_callback)
+            self.crazyflies[link_uri].disconnected.add_callback(self._disconnected_cflib_callback)
+            self.crazyflies[link_uri].open_link(link_uri)
 
     def _connected_cflib_callback(self, link_uri):
         print("Connected to", link_uri)
