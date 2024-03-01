@@ -23,7 +23,8 @@ class CflibZenohBridge:
     def __init__(self):
         zenoh.init_logger()
         self._zenoh_session = zenoh.open(zenoh.Config())
-        self.connect = self._zenoh_session.declare_queryable("cflib/connect", self._connect_zenoh_callback, False)
+        self.connect1 = self._zenoh_session.declare_queryable("cflib/connect", self._connect_zenoh_callback, False)
+        self.connect2 = self._zenoh_session.declare_queryable("cflib/disconnect", self._disconnect_zenoh_callback, False)
         self.crazyflies = {}
 
     def close_zenoh(self):
@@ -33,18 +34,35 @@ class CflibZenohBridge:
         print("Received connect query" )
         dict_obj = json.loads(query.value.payload)
         print(dict_obj)
-        self.uris = []
+        uris = []
         for key in dict_obj['crazyflies']:
-            self.uris.append(dict_obj['crazyflies'][key])
-        print(self.uris)
+            uris.append(dict_obj['crazyflies'][key])
+        print(uris)
 
-        for link_uri in self.uris:
+        for link_uri in uris:
             self.crazyflies[link_uri] = Crazyflie(rw_cache="./cache")
             self.crazyflies[link_uri].connected.add_callback(self._connected_cflib_callback)
             self.crazyflies[link_uri].connected.add_callback(self._full_connected_cflib_callback)
             self.crazyflies[link_uri].connection_failed.add_callback(self._connection_failed_cflib_callback)
             self.crazyflies[link_uri].disconnected.add_callback(self._disconnected_cflib_callback)
             self.crazyflies[link_uri].open_link(link_uri)
+
+    def _disconnect_zenoh_callback(self, query):
+        print("Received disconnect query" )
+        dict_obj = json.loads(query.value.payload)
+        print(dict_obj)
+        uris = []
+        for key in dict_obj['crazyflies']:
+            uris.append(dict_obj['crazyflies'][key])
+        print(uris)
+
+        for link_uri in uris:
+            try:
+                self.crazyflies[link_uri].close_link()
+                del self.crazyflies[link_uri]
+            except KeyError:
+                print("Crazyflie with uri", link_uri, "not found")
+
 
     def _connected_cflib_callback(self, link_uri):
         print("Connected to", link_uri)
