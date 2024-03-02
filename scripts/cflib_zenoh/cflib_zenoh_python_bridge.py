@@ -30,44 +30,43 @@ class CflibZenohBridge:
     def close_zenoh(self):
         self._zenoh_session.close()
 
+    # Callback for Zenoh Queries for the CFlib connect and disconnect topics
     def _connect_zenoh_callback(self, query):
-        print("Received connect query" )
         dict_obj = json.loads(query.value.payload)
-        print(dict_obj)
-        uris = []
-        for key in dict_obj['crazyflies']:
-            uris.append(dict_obj['crazyflies'][key])
-        print(uris)
+        print(f"Received connect query for {dict_obj}" )
 
-        for link_uri in uris:
-            self.crazyflies[link_uri] = Crazyflie(rw_cache="./cache")
-            self.crazyflies[link_uri].connected.add_callback(self._connected_cflib_callback)
-            self.crazyflies[link_uri].connected.add_callback(self._full_connected_cflib_callback)
-            self.crazyflies[link_uri].connection_failed.add_callback(self._connection_failed_cflib_callback)
-            self.crazyflies[link_uri].disconnected.add_callback(self._disconnected_cflib_callback)
-            self.crazyflies[link_uri].open_link(link_uri)
+        for name, link_uri in dict_obj['crazyflies'].items():
+            self.crazyflies[name] = Crazyflie(rw_cache="./cache")
+            self.crazyflies[name].connected.add_callback(self._connected_cflib_callback)
+            self.crazyflies[name].connected.add_callback(self._fully_connected_cflib_callback)
+            self.crazyflies[name].connection_failed.add_callback(self._connection_failed_cflib_callback)
+            self.crazyflies[name].disconnected.add_callback(self._disconnected_cflib_callback)
+            #self.crazyflies[name].open_link(link_uri)
+            key_ping = "cflib/crazyflies/"+name+"/ping"
+            self.crazyflies[name].zs_ping = self._zenoh_session.declare_queryable(key_ping, lambda query: query.reply(zenoh.Sample(key_ping, link_uri)))
+
+        query.reply(zenoh.Sample(query.key_expr, 'ok'))
 
     def _disconnect_zenoh_callback(self, query):
-        print("Received disconnect query" )
         dict_obj = json.loads(query.value.payload)
-        print(dict_obj)
-        uris = []
-        for key in dict_obj['crazyflies']:
-            uris.append(dict_obj['crazyflies'][key])
-        print(uris)
+        print(f"Received disconnect query for {dict_obj}" )
+        for name, link_uri in dict_obj['crazyflies'].items():
 
-        for link_uri in uris:
             try:
-                self.crazyflies[link_uri].close_link()
-                del self.crazyflies[link_uri]
+                #self.crazyflies[name].close_link()
+                self.crazyflies[name].zs_ping.undeclare()
+                del self.crazyflies[name]
             except KeyError:
                 print("Crazyflie with uri", link_uri, "not found")
 
+        query.reply(zenoh.Sample(query.key_expr, 'ok'))
 
+
+    # Callbacks from the Crazyflie API
     def _connected_cflib_callback(self, link_uri):
         print("Connected to", link_uri)
 
-    def _full_connected_cflib_callback(self, link_uri):
+    def _fully_connected_cflib_callback(self, link_uri):
         print("Fully connected to", link_uri)
 
     def _disconnected_cflib_callback(self, link_uri):
