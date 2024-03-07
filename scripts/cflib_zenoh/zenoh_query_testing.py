@@ -20,10 +20,16 @@ if __name__ == "__main__":
         print(f"Received '{response.ok.key_expr}': '{response.ok.payload.decode('utf-8')}'")
     time.sleep(1)
 
-    responses = zenoh_session.get('cflib/crazyflies/**', zenoh.Queue())
+
+    ## Get pings from all crazyflies
+    responses = zenoh_session.get('cflib/crazyflies/**/ping', zenoh.Queue())
     for response in responses:
         print(f"Received '{response.ok.key_expr}': '{response.ok.payload.decode('utf-8')}'")
 
+    ## Get toc from all crazyflies
+    responses = zenoh_session.get('cflib/crazyflies/**/toc', zenoh.Queue())
+    for response in responses:
+        print(f"Received '{response.ok.key_expr}': '{response.ok.payload.decode('utf-8')}'")
 
 
     time.sleep(1)
@@ -32,10 +38,6 @@ if __name__ == "__main__":
     for response in responses:
         print(f"Received '{response.ok.key_expr}': '{response.ok.payload.decode('utf-8')}'")
 
-
-    responses = zenoh_session.get('cflib/crazyflies/**', zenoh.Queue())
-    for response in responses:
-        print(f"Received '{response.ok.key_expr}': '{response.ok.payload.decode('utf-8')}'")
 
     dict['crazyflies']={'cf2': 'radio://0/40/2M/E7E7E7E704'}
     responses = zenoh_session.get("cflib/disconnect", zenoh.Queue(),value=dict, consolidation=zenoh.QueryConsolidation.NONE())

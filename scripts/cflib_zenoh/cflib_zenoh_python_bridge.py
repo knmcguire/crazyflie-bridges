@@ -14,6 +14,7 @@ from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.log import LogConfig
 from cflib.utils import uri_helper
 
+
 import zenoh
 
 logging.basicConfig(level=logging.ERROR)
@@ -41,9 +42,11 @@ class CflibZenohBridge:
             self.crazyflies[name].connected.add_callback(self._fully_connected_cflib_callback)
             self.crazyflies[name].connection_failed.add_callback(self._connection_failed_cflib_callback)
             self.crazyflies[name].disconnected.add_callback(self._disconnected_cflib_callback)
-            #self.crazyflies[name].open_link(link_uri)
+            self.crazyflies[name].open_link(link_uri)
             key_ping = "cflib/crazyflies/"+name+"/ping"
             self.crazyflies[name].zs_ping = self._zenoh_session.declare_queryable(key_ping, lambda query: query.reply(zenoh.Sample(key_ping, link_uri)))
+            toc_ping = "cflib/crazyflies/"+name+"/toc"
+            self.crazyflies[name].zs_qr_toc = self._zenoh_session.declare_queryable(toc_ping, self._toc_zenoh_callback, False)
 
         query.reply(zenoh.Sample(query.key_expr, 'ok'))
 
@@ -53,14 +56,32 @@ class CflibZenohBridge:
         for name, link_uri in dict_obj['crazyflies'].items():
 
             try:
-                #self.crazyflies[name].close_link()
+                self.crazyflies[name].close_link()
                 self.crazyflies[name].zs_ping.undeclare()
+                self.crazyflies[name].zs_qr_toc.undeclare()
                 del self.crazyflies[name]
             except KeyError:
                 print("Crazyflie with uri", link_uri, "not found")
 
         query.reply(zenoh.Sample(query.key_expr, 'ok'))
 
+
+    # Callbacks for zenoh queries per crazyflie
+    def _toc_zenoh_callback(self, query):
+        print(f"Received toc query for {query.key_expr}" )
+        # retrieve string between /crazyflies/ and /toc
+        name = str(query.key_expr).split('/')[2]
+        if name == '**':
+            for name, cf in self.crazyflies.items():
+                print(name, cf.log.toc)
+                new_key_expr = "cflib/crazyflies/"+name+"/toc"
+                query.reply(zenoh.Sample(new_key_expr, 'ok'))
+        else:
+            if name in self.crazyflies:
+                new_key_expr = "cflib/crazyflies/"+name+"/toc"
+                query.reply(zenoh.Sample(new_key_expr, 'ok'))
+            else:
+                query.reply(zenoh.Sample(new_key_expr, 'cf not found'))
 
     # Callbacks from the Crazyflie API
     def _connected_cflib_callback(self, link_uri):
