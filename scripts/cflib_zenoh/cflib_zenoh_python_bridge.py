@@ -37,25 +37,24 @@ class CflibZenohBridge:
         dict_obj = json.loads(query.value.payload)
         print(f"Received connect query for {dict_obj}" )
 
-        for name, link_uri in dict_obj['crazyflies'].items():
-            if name in self.crazyflies:
-                print("Crazyflie with name", name, "already connected")
-                continue
-            self.crazyflies[name] = Crazyflie(rw_cache="./cache")
-            self.crazyflies[name].connected.add_callback(self._connected_cflib_callback)
-            self.crazyflies[name].connected.add_callback(self._fully_connected_cflib_callback)
-            self.crazyflies[name].connection_failed.add_callback(self._connection_failed_cflib_callback)
-            self.crazyflies[name].disconnected.add_callback(self._disconnected_cflib_callback)
-            self.crazyflies[name].open_link(link_uri)
+        action = dict_obj['action']
 
-        query.reply(zenoh.Sample(query.key_expr, 'ok'))
-
-    def _disconnect_zenoh_callback(self, query):
-        dict_obj = json.loads(query.value.payload)
-        print(f"Received disconnect query for {dict_obj}" )
-        for name, link_uri in dict_obj['crazyflies'].items():
-
-            try:
+        if action == 'connect':
+            for name, link_uri in dict_obj['crazyflies'].items():
+                if name in self.crazyflies:
+                    print("Crazyflie with name", name, "already connected")
+                    continue
+                self.crazyflies[name] = Crazyflie(rw_cache="./cache")
+                self.crazyflies[name].connected.add_callback(self._connected_cflib_callback)
+                self.crazyflies[name].connected.add_callback(self._fully_connected_cflib_callback)
+                self.crazyflies[name].connection_failed.add_callback(self._connection_failed_cflib_callback)
+                self.crazyflies[name].disconnected.add_callback(self._disconnected_cflib_callback)
+                self.crazyflies[name].open_link(link_uri)
+        elif action == 'disconnect':
+            for name, link_uri in dict_obj['crazyflies'].items():
+                if name not in self.crazyflies:
+                    print("Crazyflie with uri", link_uri, "not connected")
+                    continue
                 self.crazyflies[name].close_link()
                 self.crazyflies[name].zs_ping.undeclare()
                 self.crazyflies[name].zs_qr_toc.undeclare()
@@ -63,9 +62,7 @@ class CflibZenohBridge:
                 self.crazyflies[name].zs_qr_log.undeclare()
                 self.crazyflies[name].zs_pub_log.undeclare()
                 del self.crazyflies[name]
-            except KeyError:
-                print("Crazyflie with uri", link_uri, "not found")
-
+        
         query.reply(zenoh.Sample(query.key_expr, 'ok'))
 
     def _toc_to_dict(self, log_toc, param_toc):

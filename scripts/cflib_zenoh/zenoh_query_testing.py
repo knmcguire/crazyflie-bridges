@@ -13,6 +13,7 @@ if __name__ == "__main__":
     zenoh.init_logger()
     zenoh_session = zenoh.open(zenoh.Config())
     dict = {}
+    dict['action'] = 'connect'
     dict['crazyflies']={'cf1': 'radio://0/40/2M/E7E7E7E702'}
     responses = zenoh_session.get("cflib/connect", zenoh.Queue(),value=dict, consolidation=zenoh.QueryConsolidation.NONE())
     for response in responses:
@@ -78,8 +79,9 @@ if __name__ == "__main__":
 
     time.sleep(1)
     dict = {}
+    dict['action'] = 'disconnect'
     dict['crazyflies']={'cf1': 'radio://0/40/2M/E7E7E7E702', 'cf2': 'radio://0/40/2M/E7E7E7E704'}
-    responses = zenoh_session.get("cflib/disconnect", zenoh.Queue(),value=dict, consolidation=zenoh.QueryConsolidation.NONE())
+    responses = zenoh_session.get("cflib/connect", zenoh.Queue(),value=dict, consolidation=zenoh.QueryConsolidation.NONE())
     for response in responses:
         print(f"Received '{response.ok.key_expr}': '{response.ok.payload.decode('utf-8')}'")
 
