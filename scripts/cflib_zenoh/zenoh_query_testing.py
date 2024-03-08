@@ -35,10 +35,12 @@ if __name__ == "__main__":
     
     dict = json.loads(response[0].ok.payload.decode('utf-8'))
     # print dict more nicely
-    for logblockname, logblock in dict.items():
-        print('* ',logblockname)
-        for logname, log in logblock.items():
-            print('   -',logname, ' : ', log)
+    for paramlogname, paramlog in dict.items():
+        print(paramlogname)
+        for blockname, block in paramlog.items():
+            print(' * ',blockname)
+            for name, variable in block.items():
+                print('   -',name, ': ', variable)
 
 
 

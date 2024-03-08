@@ -64,12 +64,22 @@ class CflibZenohBridge:
 
         query.reply(zenoh.Sample(query.key_expr, 'ok'))
 
-    def _toc_to_dict(self, toc):
+    def _toc_to_dict(self, log_toc, param_toc):
         toc_dict = {}
-        for logblockname, logblock in toc.items():
-            toc_dict[logblockname] = {}
+        toc_dict['log'] = {}
+        toc_dict['param'] = {}
+
+        for logblockname, logblock in log_toc.items():
+            toc_dict['log'][logblockname] = {}
             for logname, log in logblock.items():
-                toc_dict[logblockname][logname] = str(log.ctype)
+                toc_dict['log'][logblockname][logname] = str(log.ctype)
+
+
+        for paramblockname, paramblock in param_toc.items():
+            toc_dict['param'][paramblockname] = {}
+            for paramname, param in paramblock.items():
+                toc_dict['param'][paramblockname][paramname] = str(param.ctype)
+
         return toc_dict
     
     # Callbacks for zenoh queries per crazyflie
@@ -79,13 +89,13 @@ class CflibZenohBridge:
         name = str(query.key_expr).split('/')[2]
         if name == '**':
             for name, cf in self.crazyflies.items():
-                log_toc_dict = self._toc_to_dict(cf.log.toc.toc)
+                log_toc_dict = self._toc_to_dict(cf.log.toc.toc, cf.param.toc.toc)
                 new_key_expr = "cflib/crazyflies/"+name+"/toc"
                 query.reply(zenoh.Sample(new_key_expr, log_toc_dict))
         else:
             if name in self.crazyflies:
                 cf = self.crazyflies[name]
-                log_toc_dict = self._toc_to_dict(cf.log.toc.toc)
+                log_toc_dict = self._toc_to_dict(cf.log.toc.toc, cf.param.toc.toc)
                 new_key_expr = "cflib/crazyflies/"+name+"/toc"
                 query.reply(zenoh.Sample(new_key_expr, log_toc_dict))
             else:
