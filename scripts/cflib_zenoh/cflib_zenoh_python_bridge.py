@@ -142,7 +142,8 @@ class CflibZenohBridge:
         cf = self.crazyflies[name_cf]
         if action == 'config':
             config_name = dict_obj['config_name']
-            log_config = LogConfig(name=config_name, period_in_ms=100)
+            log_period = dict_obj['period_in_ms']
+            log_config = LogConfig(name=config_name, period_in_ms=log_period)
             logs = dict_obj['logs']
             for log in logs:
                 log_config.add_variable(log['name'], log['type'])

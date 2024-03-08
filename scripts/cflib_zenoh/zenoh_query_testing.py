@@ -59,6 +59,7 @@ if __name__ == "__main__":
     dict = {}
     dict['action'] = 'config'
     dict['config_name'] = 'position'
+    dict['period_in_ms'] = 10
     dict['logs'] = [{"name":"stateEstimate.x", "type":"FP16"},{"name":"stateEstimate.y", "type":"FP16"}]
     
 
