@@ -26,7 +26,6 @@ class CflibZenohBridge:
         zenoh.init_logger()
         self._zenoh_session = zenoh.open(zenoh.Config())
         self.connect1 = self._zenoh_session.declare_queryable("cflib/connect", self._connect_zenoh_callback, False)
-        self.connect2 = self._zenoh_session.declare_queryable("cflib/disconnect", self._disconnect_zenoh_callback, False)
         self.crazyflies = {}
 
     def close_zenoh(self):
@@ -60,7 +59,6 @@ class CflibZenohBridge:
                 self.crazyflies[name].zs_qr_toc.undeclare()
                 self.crazyflies[name].zs_qr_param.undeclare()
                 self.crazyflies[name].zs_qr_log.undeclare()
-                self.crazyflies[name].zs_pub_log.undeclare()
                 del self.crazyflies[name]
         
         query.reply(zenoh.Sample(query.key_expr, 'ok'))
@@ -132,7 +130,8 @@ class CflibZenohBridge:
 
     def _log_data_callback(self, timestamp, data, logconf, name_cf):
         # Publish to zenoh
-        self.crazyflies[name_cf].zs_pub_log.put({'timestamp': timestamp, 'logconf': logconf.name, 'data': data, })
+        key_pub = "cflib/crazyflies/"+name_cf+"/log_stream/" + logconf.name 
+        self._zenoh_session.put(key_pub, {'timestamp': timestamp, 'data': data, })
 
 
     def _log_zenoh_callback(self, query, name_cf):
@@ -194,7 +193,6 @@ class CflibZenohBridge:
         self.crazyflies[name].zs_qr_param = self._zenoh_session.declare_queryable(key_param, partial(self._param_zenoh_callback, name_cf=name), False)
         key_log = "cflib/crazyflies/"+name+"/log"
         self.crazyflies[name].zs_qr_log = self._zenoh_session.declare_queryable(key_log, partial(self._log_zenoh_callback, name_cf=name), False)
-        self.crazyflies[name].zs_pub_log = self._zenoh_session.declare_publisher('cflib/crazyflies/'+ name + '/log_stream')
 
     def _disconnected_cflib_callback(self, link_uri):
         print("Disconnected from", link_uri)

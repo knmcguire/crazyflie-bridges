@@ -69,7 +69,7 @@ if __name__ == "__main__":
     dict['config_name'] = 'position'
     responses = zenoh_session.get('cflib/crazyflies/**/log', zenoh.Queue(), value=dict, consolidation=zenoh.QueryConsolidation.NONE())
 
-    sub = zenoh_session.declare_subscriber('cflib/crazyflies/**/log_stream', lambda sample:
+    sub = zenoh_session.declare_subscriber('cflib/crazyflies/**/log_stream/**', lambda sample:
     print(f"Received '{sample.key_expr}': '{sample.payload.decode('utf-8')}'"))
 
     time.sleep(4)
