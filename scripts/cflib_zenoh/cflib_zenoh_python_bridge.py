@@ -60,6 +60,8 @@ class CflibZenohBridge:
                 self.crazyflies[name].zs_ping.undeclare()
                 self.crazyflies[name].zs_qr_toc.undeclare()
                 self.crazyflies[name].zs_qr_param.undeclare()
+                self.crazyflies[name].zs_qr_log.undeclare()
+                self.crazyflies[name].zs_pub_log.undeclare()
                 del self.crazyflies[name]
             except KeyError:
                 print("Crazyflie with uri", link_uri, "not found")
@@ -131,24 +133,31 @@ class CflibZenohBridge:
         new_key_expr = "cflib/crazyflies/"+name_cf+"/param"
         query.reply(zenoh.Sample(new_key_expr, dict))
 
+    def _log_data_callback(self, timestamp, data, logconf, name_cf):
+        # Publish to zenoh
+        self.crazyflies[name_cf].zs_pub_log.put({'timestamp': timestamp, 'logconf': logconf.name, 'data': data, })
+
+
     def _log_zenoh_callback(self, query, name_cf):
         print(f"Received log query for {query.key_expr} on the {name_cf} callback" )
         
         dict_obj = json.loads(query.value.payload)
         action = dict_obj['action']
+        cf = self.crazyflies[name_cf]
         if action == 'config':
             config_name = dict_obj['config_name']
             log_config = LogConfig(name=config_name, period_in_ms=100)
             logs = dict_obj['logs']
-            cf = self.crazyflies[name_cf]
             for log in logs:
                 log_config.add_variable(log['name'], log['type'])
+            log_config.data_received_cb.add_callback(partial(self._log_data_callback, name_cf=name_cf))
             cf.log.add_config(log_config)
             cf.log_config = {}
             cf.log_config[config_name] = log_config
         elif action == 'start':
             config_name = dict_obj['config_name']
             cf.log_config[config_name].start()
+            print('start')
         elif action == 'stop':
             config_name = dict_obj['config_name']
             cf.log_config[config_name].stop()
@@ -188,6 +197,7 @@ class CflibZenohBridge:
         self.crazyflies[name].zs_qr_param = self._zenoh_session.declare_queryable(key_param, partial(self._param_zenoh_callback, name_cf=name), False)
         key_log = "cflib/crazyflies/"+name+"/log"
         self.crazyflies[name].zs_qr_log = self._zenoh_session.declare_queryable(key_log, partial(self._log_zenoh_callback, name_cf=name), False)
+        self.crazyflies[name].zs_pub_log = self._zenoh_session.declare_publisher('cflib/crazyflies/'+ name + '/log_stream')
 
     def _disconnected_cflib_callback(self, link_uri):
         print("Disconnected from", link_uri)

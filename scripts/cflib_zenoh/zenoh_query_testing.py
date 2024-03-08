@@ -58,13 +58,23 @@ if __name__ == "__main__":
     dict = {}
     dict['action'] = 'config'
     dict['config_name'] = 'position'
-    dict['logs'] = [{"name":"stateEstimate.x", "type":"float"},{"name":"stateEstimate.y", "type":"float"}]
+    dict['logs'] = [{"name":"stateEstimate.x", "type":"FP16"},{"name":"stateEstimate.y", "type":"FP16"}]
     
 
     responses = zenoh_session.get('cflib/crazyflies/**/log', zenoh.Queue(), value=dict, consolidation=zenoh.QueryConsolidation.NONE())
-    for response in responses:
-        print(f"Received '{response.ok.key_expr}': '{response.ok.payload.decode('utf-8')}'")
     
+    dict = {}
+    dict['action'] = 'start'
+    dict['config_name'] = 'position'
+    responses = zenoh_session.get('cflib/crazyflies/**/log', zenoh.Queue(), value=dict, consolidation=zenoh.QueryConsolidation.NONE())
+
+    sub = zenoh_session.declare_subscriber('cflib/crazyflies/**/log_stream', lambda sample:
+    print(f"Received '{sample.key_expr}': '{sample.payload.decode('utf-8')}'"))
+
+    time.sleep(4)
+    dict['action'] = 'stop'
+    dict['config_name'] = 'position'
+    responses = zenoh_session.get('cflib/crazyflies/**/log', zenoh.Queue(), value=dict, consolidation=zenoh.QueryConsolidation.NONE())
 
     time.sleep(1)
     dict = {}
@@ -74,7 +84,7 @@ if __name__ == "__main__":
         print(f"Received '{response.ok.key_expr}': '{response.ok.payload.decode('utf-8')}'")
 
 
-
+    zenoh_session.close()
 
     '''
 
