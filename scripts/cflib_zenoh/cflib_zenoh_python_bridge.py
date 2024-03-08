@@ -85,23 +85,15 @@ class CflibZenohBridge:
         return toc_dict
     
     # Callbacks for zenoh queries per crazyflie
-    def _toc_zenoh_callback(self, query):
-        print(f"Received toc query for {query.key_expr}" )
+    def _toc_zenoh_callback(self, query, name_cf):
+        print(f"Received toc query for {query.key_expr} on the {name_cf} callback" )
         # retrieve string between /crazyflies/ and /toc
         name = str(query.key_expr).split('/')[2]
-        if name == '**':
-            for name, cf in self.crazyflies.items():
-                log_toc_dict = self._toc_to_dict(cf.log.toc.toc, cf.param.toc.toc)
-                new_key_expr = "cflib/crazyflies/"+name+"/toc"
-                query.reply(zenoh.Sample(new_key_expr, log_toc_dict))
-        else:
-            if name in self.crazyflies:
-                cf = self.crazyflies[name]
-                log_toc_dict = self._toc_to_dict(cf.log.toc.toc, cf.param.toc.toc)
-                new_key_expr = "cflib/crazyflies/"+name+"/toc"
-                query.reply(zenoh.Sample(new_key_expr, log_toc_dict))
-            else:
-                query.reply(zenoh.Sample(new_key_expr, 'cf not found'))
+
+        cf = self.crazyflies[name_cf]
+        log_toc_dict = self._toc_to_dict(cf.log.toc.toc, cf.param.toc.toc)
+        new_key_expr = "cflib/crazyflies/"+name+"/toc"
+        query.reply(zenoh.Sample(new_key_expr, log_toc_dict))
 
 
     def _handle_param(self, cf, action, name_param, value):
@@ -166,7 +158,6 @@ class CflibZenohBridge:
 
     def _disconnected_cflib_callback(self, link_uri):
         print("Disconnected from", link_uri)
-
 
     def _connection_failed_cflib_callback(self, link_uri, msg):
         print("Connection to", link_uri, "failed:", msg)
