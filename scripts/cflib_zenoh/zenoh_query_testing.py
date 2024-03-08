@@ -42,7 +42,7 @@ if __name__ == "__main__":
             print(' * ',blockname)
             for name, variable in block.items():
                 print('   -',name, ': ', variable)
-    '''
+
 
     time.sleep(2)
     dict = {}
@@ -53,6 +53,18 @@ if __name__ == "__main__":
     responses = zenoh_session.get('cflib/crazyflies/**/param', zenoh.Queue(), value=dict, consolidation=zenoh.QueryConsolidation.NONE())
     for response in responses:
         print(f"Received '{response.ok.key_expr}': '{response.ok.payload.decode('utf-8')}'")
+    '''
+    time.sleep(2)
+    dict = {}
+    dict['action'] = 'config'
+    dict['config_name'] = 'position'
+    dict['logs'] = [{"name":"stateEstimate.x", "type":"float"},{"name":"stateEstimate.y", "type":"float"}]
+    
+
+    responses = zenoh_session.get('cflib/crazyflies/**/log', zenoh.Queue(), value=dict, consolidation=zenoh.QueryConsolidation.NONE())
+    for response in responses:
+        print(f"Received '{response.ok.key_expr}': '{response.ok.payload.decode('utf-8')}'")
+    
 
     time.sleep(1)
     dict = {}
