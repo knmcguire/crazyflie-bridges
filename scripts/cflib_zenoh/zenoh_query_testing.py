@@ -30,7 +30,8 @@ if __name__ == "__main__":
     for response in responses:
         print(f"Received '{response.ok.key_expr}': '{response.ok.payload.decode('utf-8')}'")
     
-    ## Get toc from all crazyflies
+    ## Get toc from one crazyflie
+    '''
     response = list(zenoh_session.get('cflib/crazyflies/cf1/toc', zenoh.Queue()))
     
     dict = json.loads(response[0].ok.payload.decode('utf-8'))
@@ -41,6 +42,24 @@ if __name__ == "__main__":
             print(' * ',blockname)
             for name, variable in block.items():
                 print('   -',name, ': ', variable)
+    '''
+    time.sleep(2)
+    dict = {}
+    dict['action'] = 'get'
+    dict['name_param'] = 'stabilizer.controller'
+    dict['value'] = 1
+
+    responses = zenoh_session.get('cflib/crazyflies/**/param', zenoh.Queue(), value=dict, consolidation=zenoh.QueryConsolidation.NONE())
+    for response in responses:
+        print(f"Received '{response.ok.key_expr}': '{response.ok.payload.decode('utf-8')}'")
+    
+
+    time.sleep(1)
+    dict = {}
+    dict['crazyflies']={'cf1': 'radio://0/40/2M/E7E7E7E702', 'cf2': 'radio://0/40/2M/E7E7E7E704'}
+    responses = zenoh_session.get("cflib/disconnect", zenoh.Queue(),value=dict, consolidation=zenoh.QueryConsolidation.NONE())
+    for response in responses:
+        print(f"Received '{response.ok.key_expr}': '{response.ok.payload.decode('utf-8')}'")
 
 
 

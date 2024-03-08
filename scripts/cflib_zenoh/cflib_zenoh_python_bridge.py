@@ -14,6 +14,7 @@ from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.log import LogConfig
 from cflib.utils import uri_helper
 
+from functools import partial
 
 import zenoh
 
@@ -58,6 +59,7 @@ class CflibZenohBridge:
                 self.crazyflies[name].close_link()
                 self.crazyflies[name].zs_ping.undeclare()
                 self.crazyflies[name].zs_qr_toc.undeclare()
+                self.crazyflies[name].zs_qr_param.undeclare()
                 del self.crazyflies[name]
             except KeyError:
                 print("Crazyflie with uri", link_uri, "not found")
@@ -101,6 +103,42 @@ class CflibZenohBridge:
             else:
                 query.reply(zenoh.Sample(new_key_expr, 'cf not found'))
 
+
+    def _handle_param(self, cf, action, name_param, value):
+        success = True
+        if action == 'get':
+            try:
+                value = cf.param.get_value(name_param)
+            except KeyError:
+                success = False
+                value = 'Param not in toc'
+        if action == 'set':
+            try: 
+                cf.param.set_value(name_param, value)
+            except KeyError:
+                success = False
+                value = 'Param not in toc'
+
+        return success, value
+
+
+    def _param_zenoh_callback(self, query, name_cf):
+        print(f"Received param query for {query.key_expr} on the {name_cf} callback" )
+
+        dict_obj = json.loads(query.value.payload)
+        action = dict_obj['action']
+        name_param = dict_obj['name_param']
+        value = dict_obj['value']
+
+        # retrieve string between /crazyflies/ and /toc
+        cf = self.crazyflies[name_cf]
+        success, value = self._handle_param(cf, action, name_param, value)
+        dict = {}
+        dict['success'] = success
+        dict['value'] = value
+        new_key_expr = "cflib/crazyflies/"+name_cf+"/param"
+        query.reply(zenoh.Sample(new_key_expr, dict))
+
     # Callbacks from the Crazyflie API
     def _connected_cflib_callback(self, link_uri):
         # find the crazyflie with the same uri
@@ -121,12 +159,14 @@ class CflibZenohBridge:
                 name = cfname
         
         print(f"Received TOC for {name} on uri {link_uri}")
-
-        toc_ping = "cflib/crazyflies/"+name+"/toc"
-        self.crazyflies[name].zs_qr_toc = self._zenoh_session.declare_queryable(toc_ping, self._toc_zenoh_callback, False)
+        key_toc = "cflib/crazyflies/"+name+"/toc"
+        self.crazyflies[name].zs_qr_toc = self._zenoh_session.declare_queryable(key_toc, partial(self._toc_zenoh_callback, name_cf=name), False)
+        key_param = "cflib/crazyflies/"+name+"/param"
+        self.crazyflies[name].zs_qr_param = self._zenoh_session.declare_queryable(key_param, partial(self._param_zenoh_callback, name_cf=name), False)
 
     def _disconnected_cflib_callback(self, link_uri):
         print("Disconnected from", link_uri)
+
 
     def _connection_failed_cflib_callback(self, link_uri, msg):
         print("Connection to", link_uri, "failed:", msg)
